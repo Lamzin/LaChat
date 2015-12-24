@@ -1,54 +1,41 @@
 package main
 
-import "net"
-import "fmt"
-import "bufio"
-//import "os"
-import "time"
-import "math/rand"
+import (
+	"bufio"
+	"fmt"
+	"net"
+	"os"
+	"time"
+	"strings"
+	"./rsa"
+)
+
+type server struct {
+	conn net.Conn
+	encode rsa.RSA
+	decode rsa.RSA
+}
 
 func main() {
-
-	for i := 0; i < 300; i++ {
-
-		go func(){
-			// connect to this socket
-			conn, err := net.Dial("tcp", "127.0.0.1:6000")
-			
-			if err != nil {
-				fmt.Print("Here!")
-				fmt.Print(err)	
-				return
-			}
-				
-			handleConnection(conn)
-		}()
+	conn, err := net.Dial("tcp", "127.0.0.1:6000")
+	if err != nil {
+		fmt.Print(err)
+		return
 	}
-
-	time.Sleep(time.Second * 120)
-
+	handleConnection(conn)
 }
-
-
 
 func sendMessage(conn net.Conn) {
-	//reader := bufio.NewReader(os.Stdin)
-
+	reader := bufio.NewReader(os.Stdin)
 	for {
-		//fmt.Print("Text to send: ")	
-
-		text := fmt.Sprintf("test bot #%d\n", rand.Int31())
-		time.Sleep(time.Second * 1)
-	
-//		text, err := reader.ReadString('\n')
-//		if err != nil {
-//			fmt.Print(err)
-//			return
-//		}
-		fmt.Fprintf(conn, text)	
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Print(err)
+			return
+		}
+		fmt.Fprintf(conn, text)
 	}
 }
-
 
 func receiveMessage(conn net.Conn) {
 	for {
@@ -56,12 +43,17 @@ func receiveMessage(conn net.Conn) {
 		if err != nil {
 			fmt.Print(err)
 			return
-		}			
+		}
 		
-		fmt.Print(msg)
+		arr := strings.Split(msg, " ")
+		
+		if len(arr) > 0 && arr[0] == "rsa" {
+				
+		} else if len(arr) > 0 && arr[0] == "msg" {
+			fmt.Print(msg + "$ ")
+		}
 	}
 }
-
 
 func handleConnection(conn net.Conn) {
 	go receiveMessage(conn)
