@@ -4,7 +4,7 @@ import "net"
 import "fmt"
 import "bufio"
 import "os"
-import "time"
+// import "time"
 import "strings"
 import "strconv"
 import "./rsa"
@@ -44,7 +44,7 @@ type dialog struct {
 }
 
 
-func (d dialog) sendMessage() {
+func (d *dialog) sendMessage() {
 	fmt.Fprintf(d.conn, "connect %s %s %d %d\n", 
 				d.friend1, 
 				d.friend2, 
@@ -59,10 +59,10 @@ func (d dialog) sendMessage() {
 			return
 		}
 
-		// if !d.is_exist {
-		// 	fmt.Print("Wait your friend...")
-		// 	continue
-		// }
+		if !d.is_exist {
+			fmt.Printf("Wait your friend...")
+			continue
+		}
 
 		key := 2
 		fmt.Fprintf(d.conn, "text %d %s\n", d.RSAdecode.Decode(int64(key)), DecodeText(text, key))
@@ -70,7 +70,7 @@ func (d dialog) sendMessage() {
 }
 
 
-func (d dialog) receiveMessage() {
+func (d *dialog) receiveMessage() {
 	for {
 		msg, err := bufio.NewReader(d.conn).ReadString('\n')
 		if err != nil {
@@ -78,37 +78,36 @@ func (d dialog) receiveMessage() {
 			return
 		}			
 		
+		msg = strings.TrimSpace(msg)
 		arr := strings.Split(msg, " ")
+
 		if len(arr) > 2 {
-			if arr[0] == "decode" {
+			switch arr[0] {
+			case "decode":
 				if len(arr) == 3 {
-					if n, err1 := strconv.Atoi(arr[1]); err1 == nil {
-						if key, err2 := strconv.Atoi(arr[2]); err2 == nil {
+					n, err1 := strconv.ParseInt(arr[1], 10, 64); 
+					key, err2 := strconv.ParseInt(arr[2], 10, 64)
+					if err1 == nil && err2 == nil {
 							d.is_exist = true
 							d.RSAdecode.Numb = int64(n)
 							d.RSAdecode.DecodeExp = int64(key)
-						}
 					}
 				}
-			} else if arr[0] == "text" {
-				if key, err := strconv.Atoi(arr[1]); err == nil {				
-					text := strings.Join(arr[1:], " ")
+			case "text":
+				if key, err := strconv.ParseInt(arr[1], 10, 64); err == nil {				
+					text := strings.Join(arr[2:], " ")
 					text = EncodeText(text, int(d.RSAencode.Encode(int64(key))))
-					fmt.Print(text)
+					fmt.Printf(text + "\n")
 				}
 			}
-		} else {
-			continue		
-		}
+		} 
 
-		fmt.Print(msg)
 	}
 }
 
 
-func (d dialog) handleConnection() {
+func (d *dialog) handleConnection() {
 	go d.receiveMessage()
-	time.Sleep(time.Second * 1)
 	d.sendMessage()
 }
 
