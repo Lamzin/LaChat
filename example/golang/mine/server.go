@@ -28,7 +28,7 @@ func main() {
 
 	msgchan := make(chan string, 1)
 	addchan := make(chan Client, 1)
-	rmchan := make(chan Client, 1) // remove chan
+	rmchan  := make(chan Client, 1) // remove chan
 
 	go handleMessages(msgchan, addchan, rmchan)
 
