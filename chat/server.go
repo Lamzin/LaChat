@@ -126,8 +126,8 @@ func handleConnection(c net.Conn,
 	}()
 
 	// I/O	
-	go client.ReadLinesInto(msgchan)
-	client.WriteLinesFrom(client.ch)
+	go client.WriteLinesFrom(client.ch)
+	client.ReadLinesInto(msgchan)
 
 }
 
@@ -166,7 +166,7 @@ func handleMessages(msgchan <-chan Message, addchan <-chan Client, rmchan <-chan
 						log.Printf("SEND to BOTH decode")
 					}
 				}
-				
+
 			case client := <-rmchan:
 				log.Printf("Client disconnects: %v; nick: %s\n", 
 					       client.conn.RemoteAddr(), client.name)

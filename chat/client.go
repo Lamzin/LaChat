@@ -4,12 +4,15 @@ import "net"
 import "fmt"
 import "bufio"
 import "os"
-// import "time"
+import "time"
 import "strings"
 import "strconv"
 import "./rsa"
+import "math/rand"
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	var dial dialog
 	dial.is_exist = false
 	dial.RSAdecode = rsa.NewRSA()
@@ -64,14 +67,17 @@ func (d *dialog) sendMessage() {
 			continue
 		}
 
-		key := 2
-		fmt.Fprintf(d.conn, "text %d %s\n", d.RSAdecode.Decode(int64(key)), DecodeText(text, key))
+		key := rand.Intn(128)
+		fmt.Fprintf(d.conn, "text %d %s\n", d.RSAencode.Decode(int64(key)), DecodeText(text, key))
 	}
 }
 
 
 func (d *dialog) receiveMessage() {
 	for {
+		// fmt.Print(d.RSAdecode.Numb, d.RSAdecode.DecodeExp, d.RSAdecode.EncodeExp, "\n")
+		// fmt.Print(d.RSAencode.Numb, d.RSAencode.DecodeExp, d.RSAencode.EncodeExp, "\n")
+
 		msg, err := bufio.NewReader(d.conn).ReadString('\n')
 		if err != nil {
 			fmt.Print(err)
@@ -89,15 +95,15 @@ func (d *dialog) receiveMessage() {
 					key, err2 := strconv.ParseInt(arr[2], 10, 64)
 					if err1 == nil && err2 == nil {
 							d.is_exist = true
-							d.RSAdecode.Numb = int64(n)
-							d.RSAdecode.DecodeExp = int64(key)
+							d.RSAencode.Numb = int64(n)
+							d.RSAencode.DecodeExp = int64(key)
 					}
 				}
 			case "text":
 				if key, err := strconv.ParseInt(arr[1], 10, 64); err == nil {				
 					text := strings.Join(arr[2:], " ")
-					text = EncodeText(text, int(d.RSAencode.Encode(int64(key))))
-					fmt.Printf(text + "\n")
+					text = EncodeText(text, int(d.RSAdecode.Encode(int64(key))))
+					fmt.Printf("Friend: %s\n", text)
 				}
 			}
 		} 
@@ -113,22 +119,18 @@ func (d *dialog) handleConnection() {
 
 
 func DecodeText(s string, key int) string {
-	return s
-
 	arr := []byte(s)
 	for i := 0; i < len(arr); i++ {
-		arr[i] -= byte(key)
+		arr[i] ^= byte(key)
 	}
 	return string(arr)
 }
 
 
 func EncodeText(s string, key int) string {
-	return s
-	
 	arr := []byte(s)
 	for i := 0; i < len(arr); i++ {
-		arr[i] -= byte(key)
+		arr[i] ^= byte(key)
 	}
 	return string(arr)
 }
