@@ -10,52 +10,64 @@ import (
 )
 
 type Message interface { Receive() error }
-type Foo struct { p1, p2 string }
-type Bar struct { i1, i2 int }
+
+type Foo struct { 
+	P1 string `json:"p1"`
+	P2 string `json:"p2"`
+}
+
+type FooMessage struct { 
+	Type string `json:"type"`
+	Data Foo `json:"data"`
+}
+
+type Bar struct { 
+	I1 int `json:"i1"`
+	I2 int `json:"i2"`
+}
+
+type BarMessage struct { 
+	Type string `json:"type"`
+	Data Bar `json:"data"`
+}
+
+type Msg struct {
+	Type string `json:"type"`
+	Data interface{} `json:"data"`
+}
 
 func (f Foo) Receive() error {
-	return print(strings.Join([]string{f.p1, f.p2}, ", "))
+	return print(strings.Join([]string{f.P1, f.P2}, ", "))
 }
 
 func (b Bar) Receive() error {
-	return print(strconv.Itoa(b.i1 + b.i2))
-}
-
-func NewFoo(data map[string]interface{}) (Foo, bool) {
-	p1, ok1 := data["p1"].(string);
-	p2, ok2 := data["p2"].(string);
-	if ok1 && ok2 {
-		return Foo{p1, p2}, true
-	}
-	return Foo{"",""}, false
-}
-
-func NewBar(data map[string]interface{}) (Bar, bool) {
-	i1, err1 := strconv.Atoi(data["i1"].(string))
-	i2, err2 := strconv.Atoi(data["i2"].(string))
-	if (err1 == nil && err2 == nil) {
-		return Bar{i1, i2}, true
-	}
-	return Bar{0, 0}, false
+	return print(strconv.Itoa(b.I1 + b.I2))
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	request_message := []byte(r.URL.Query().Get("msg"))
+
 	var msg_json map[string]interface{}
-	if err := json.Unmarshal([]byte(r.URL.Query().Get("msg")), &msg_json); err == nil {
-		if data, ok := msg_json["data"].(map[string]interface{}); ok {
-			var msg Message
-			var msg_ok bool
-			if msg_json["type"] == "Foo" {
-				msg, msg_ok = NewFoo(data)
-			} else if msg_json["type"] == "Bar" {
-				msg, msg_ok = NewBar(data)
-			}
-			
-			if msg_ok {
-				msg.Receive()
-			}
-		}
+	if err := json.Unmarshal(request_message, &msg_json); err != nil {
+		return
 	}
+		
+	var msg Message
+	if msg_json["type"] == "Foo" {
+		var foomsg FooMessage
+		if err := json.Unmarshal(request_message, &foomsg); err != nil {
+			return
+		}
+		msg = foomsg.Data
+	} else if msg_json["type"] == "Bar" {
+		var barmsg BarMessage
+		if err := json.Unmarshal(request_message, &barmsg); err != nil {
+			return
+		}
+		msg = barmsg.Data
+	}
+	
+	msg.Receive()
 }
 
 var logger, _ = syslog.New(syslog.LOG_INFO, "GoServer")
